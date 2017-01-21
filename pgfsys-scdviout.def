@@ -1,0 +1,139 @@
+%%
+%% This is 'pgfsys-scdviout.def'.
+%%
+
+%--------------------------------------- pgfsys operations
+
+%% these are just dummies
+\def\pgfsys@invoke#1{#1}
+\def\pgfsys@outerinvoke{\pgfsys@invoke}
+\def\pgfsys@moveto#1#2{}
+\def\pgfsys@lineto#1#2{}
+\def\pgfsys@curveto#1#2#3#4#5#6{}
+\def\pgfsys@rect#1#2#3#4{}
+\def\pgfsys@closepath{}
+\def\pgfsys@stroke{}
+\def\pgfsys@fill{}
+\def\pgfsys@fillstroke{}
+\def\pgfsys@clipnext{}
+\def\pgfsys@discardpath{}
+\def\pgfsys@setlinewidth#1{}
+\def\pgfsys@buttcap{}
+\def\pgfsys@roundcap{}
+\def\pgfsys@rectcap{}
+\def\pgfsys@miterjoin{}
+\def\pgfsys@setmiterlimit#1{}
+\def\pgfsys@roundjoin{}
+\def\pgfsys@beveljoin{}
+\def\pgfsys@setdash#1#2{}
+\def\pgfsys@color@rgb@stroke#1#2#3{}
+\def\pgfsys@color@rgb@fill#1#2#3{}
+\def\pgfsys@color@cmyk@stroke#1#2#3#4{}
+\def\pgfsys@color@cmyk@fill#1#2#3#4{}
+\def\pgfsys@color@cmy@stroke#1#2#3{}
+\def\pgfsys@color@cmy@fill#1#2#3{}
+\def\pgfsys@color@gray@stroke#1{}
+\def\pgfsys@color@gray@fill#1{}
+\pgfsys@color@reset@inordertrue
+\def\pgfsys@color@reset{}
+\def\pgfsys@color@unstacked#1{}
+\def\pgfsys@transformcm#1#2#3#4#5#6{}
+\def\pgfsys@beginscope{}
+\def\pgfsys@endscope{}
+\def\pgfsys@stroke@opacity#1{}
+\def\pgfsys@fill@opacity#1{}
+\def\pgfsys@transparencygroupfrombox#1{}
+\def\pgfsys@blend@mode#1{}
+\def\pgfsys@definemask{}
+\def\pgfsys@fadingfrombox#1#2{}
+\def\pgfsys@usefading#1#2#3#4#5#6#7{}
+\def\pgfsys@horishading#1#2#3{\pgf@sys@noshading{#1}}
+\def\pgfsys@vertshading#1#2#3{\pgf@sys@noshading{#1}}
+\def\pgfsys@radialshading#1#2#3{\pgf@sys@noshading{#1}}
+\def\pgfsys@functionalshading#1#2#3#4{\pgf@sys@noshading{#1}}
+\def\pgfsys@declarepattern#1#2#3#4#5#6#7#8#9{}
+\def\pgfsys@setpatternuncolored#1#2#3#4{}
+\def\pgfsys@setpatterncolored#1{}
+\def\pgfsys@papersize#1#2{}
+\def\pgfsys@global@papersize#1#2{\pgfsys@papersize{#1}{#2}}
+\def\pgfsys@prepare@papersize#1#2{\pgfsys@papersize{#1}{#2}}
+\def\pgfsys@shadinginsidepgfpicture#1{}
+\def\pgfsys@hbox#1{}
+\def\pgfsys@hboxsynced#1{}
+\def\pgfsys@pictureboxsynced#1{}
+\def\pgfsys@defineimage{\let\pgf@image\pgfutil@empty}
+\def\pgfsys@beginpicture{}
+\def\pgfsys@endpicture{}
+
+%% \pgfsys@typesetpicturebox<box-register>
+\def\pgfsys@typesetpicturebox#1{%
+%\scpgz@log{bbox=(\the\pgf@picminx,\the\pgf@picminy)(\the\pgf@picmaxx,\the\pgf@picmaxy)@\pgf@shift@baseline}%
+  \pgf@ya=\pgf@shift@baseline\relax%
+  \advance\pgf@ya by-\pgf@picminy\relax%
+  \advance\pgf@picmaxy by-\pgf@picminy\relax% maxy is now the height
+  \advance\pgf@picmaxx by-\pgf@picminx\relax% maxx is now the width
+  \setbox#1=\hbox{\scpgz@the@world}%
+  \ht#1=\pgf@picmaxy%
+  \wd#1=\pgf@picmaxx%
+  \dp#1=0pt%
+  \leavevmode%
+  \pgf@xa=\pgf@trimleft@final\relax  \ifdim\pgf@xa=0pt \else\kern\pgf@xa\fi
+  \raise-\pgf@ya\box#1%
+  \pgf@xa=\pgf@trimright@final\relax \ifdim\pgf@xa=0pt \else\kern\pgf@xa\fi
+}
+
+%--------------------------------------- change the world
+
+%% variables
+\let\scpgz@v\relax
+\let\scpgz@stmt\relax
+\let\scpgz@world\relax
+\chardef\scpgz@zero=0
+\def\scpgz@spc{ }
+
+%% \scpgz@log{...}
+\def\scpgz@log#1{\immediate\write16{SC>>#1}}
+
+%% \scpgz@the@world
+\def\scpgz@the@world{%
+  \pgf@xc=\ifdim\pgf@picmaxx<\pgf@picmaxy \pgf@picmaxx \else \pgf@picmaxy \fi
+%\scpgz@log{size=\the\pgf@xc(\the\pgf@picmaxx|\the\pgf@picmaxy)}%
+  \pgfmathtruncatemacro\scpgz@v{round(\pgf@xc*0.2)}%
+%\scpgz@log{line width=\scpgz@v min}%
+  \ifnum\scpgz@v>\scpgz@zero
+    \edef\scpgz@world{\special{pn \scpgz@v}}%
+    \scpgz@make@new@world
+    \ifdim\pgf@picmaxx>\pgf@xc
+      \pgf@yc\pgf@picmaxx \advance\pgf@yc-\pgf@xc \hskip.5\pgf@yc
+    \fi
+    \ifdim\pgf@picmaxy>\pgf@xc
+      \pgf@yc\pgf@picmaxy \advance\pgf@yc-\pgf@xc \raise.5\pgf@yc
+    \fi
+    \hbox{\scpgz@world}%
+  \fi
+}
+\def\scpgz@DO#1{\edef\scpgz@world{\scpgz@world\special{#1}}}
+\def\scpgz@BT#1#2{\def\scpgz@stmt{#1#2}}
+\def\scpgz@N#1{\edef\scpgz@stmt{\scpgz@stmt\scpgz@spc#1}}
+\def\scpgz@S#1{\pgfmathtruncatemacro\scpgz@v{round(#1*\pgf@xc*13.837)}%
+  \edef\scpgz@stmt{\scpgz@stmt\scpgz@spc\scpgz@v}}
+\def\scpgz@ET{\scpgz@DO\scpgz@stmt}
+
+%---------------------------------------
+
+\begingroup
+  \def\do{\noexpand\scpgz@DO}
+  \def\tpic#1{\noexpand\scpgz@BT#1\noexpand\scpgz@ET}
+  \def\(#1){\noexpand\scpgz@S{#1}}
+  \def\[#1]{\noexpand\scpgz@N{#1}}
+  \xdef\scpgz@make@new@world{%
+    \do{color push Red}%
+    \tpic{pa\(0)\(0)}\tpic{pa\(1)\(-1)}\tpic{fp}%
+    \tpic{ar\(0.5)\(-0.5)\(0.5)\(0.5)\[0]\[6.3]}%
+    \do{color pop}%
+  }
+\endgroup
+
+%--------------------------------------- all done
+\endinput
+%% EOF
