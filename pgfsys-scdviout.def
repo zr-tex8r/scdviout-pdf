@@ -1,12 +1,21 @@
 %%
-%% This is 'pgfsys-scdviout.def'.
+%% This is file 'pgfsys-scdviout.def'.
 %%
+%% Copyright (c) 2017 Takayuki YATO (aka. "ZR")
+%%   GitHub:   https://github.com/zr-tex8r
+%%   Twitter:  @zr_tex8r
+%%
+%% This package is distributed under the MIT License.
+%%
+
+%% file declaration
+\ProvidesFile{pgfsys-scdviout.def}[2017/08/08 v0.1]
 
 %--------------------------------------- pgfsys operations
 
-%% these are just dummies
+%% simple dummy definitions
 \def\pgfsys@invoke#1{#1}
-\def\pgfsys@outerinvoke{\pgfsys@invoke}
+%\def\pgfsys@outerinvoke{\pgfsys@invoke}
 \def\pgfsys@moveto#1#2{}
 \def\pgfsys@lineto#1#2{}
 \def\pgfsys@curveto#1#2#3#4#5#6{}
@@ -34,12 +43,13 @@
 \def\pgfsys@color@cmy@fill#1#2#3{}
 \def\pgfsys@color@gray@stroke#1{}
 \def\pgfsys@color@gray@fill#1{}
-\pgfsys@color@reset@inordertrue
+%\pgfsys@color@reset@inordertrue
 \def\pgfsys@color@reset{}
 \def\pgfsys@color@unstacked#1{}
 \def\pgfsys@transformcm#1#2#3#4#5#6{}
 \def\pgfsys@beginscope{}
 \def\pgfsys@endscope{}
+%\def\pgfsys@imagesuffixlist{}
 \def\pgfsys@stroke@opacity#1{}
 \def\pgfsys@fill@opacity#1{}
 \def\pgfsys@transparencygroupfrombox#1{}
@@ -54,25 +64,83 @@
 \def\pgfsys@declarepattern#1#2#3#4#5#6#7#8#9{}
 \def\pgfsys@setpatternuncolored#1#2#3#4{}
 \def\pgfsys@setpatterncolored#1{}
-\def\pgfsys@papersize#1#2{}
-\def\pgfsys@global@papersize#1#2{\pgfsys@papersize{#1}{#2}}
-\def\pgfsys@prepare@papersize#1#2{\pgfsys@papersize{#1}{#2}}
+%\def\pgfsys@global@papersize#1#2{\pgfsys@papersize{#1}{#2}}
+%\def\pgfsys@markposition#1{\pgf@sys@fail{marking the current position}}
+%\def\pgfsys@getposition#1#2{\let#2=\relax}
+%(override defaults)
+\def\pgfsys@shadingoutsidepgfpicture#1{}
 \def\pgfsys@shadinginsidepgfpicture#1{}
 \def\pgfsys@hbox#1{}
 \def\pgfsys@hboxsynced#1{}
 \def\pgfsys@pictureboxsynced#1{}
-\def\pgfsys@defineimage{\let\pgf@image\pgfutil@empty}
 \def\pgfsys@beginpicture{}
 \def\pgfsys@endpicture{}
+\def\pgfsys@defineimage{\let\pgf@image\pgfutil@empty}
 
-%% \pgfsys@typesetpicturebox<box-register>
+% The following operations are the same as in pgfsys-dvipdfmx.def.
+
+% position tracking
+% On pdfTeX < v1.40, \pdfsavepos exists but works only in PDF-mode.
+\ifx\savepos\@undefined
+  \ifx\pdfsavepos\@undefined % savepos unavailable
+  \else\ifnum \ifx\pdftexversion\@undefined 999 % e-pTeX
+              \else\ifx\luatexversion\@undefined \pdftexversion
+              \else 999 % old LuaTeX
+              \fi\fi >139
+    \let\pgf@sys@savepos\pdfsavepos
+    \let\pgf@sys@lastxpos\pdflastxpos
+    \let\pgf@sys@lastypos\pdflastypos
+  \fi\fi
+\else % new LuaTeX (>= 0.81)
+  \let\pgf@sys@savepos\savepos
+  \let\pgf@sys@lastxpos\lastxpos
+  \let\pgf@sys@lastypos\lastypos
+\fi
+\ifx\pgf@sys@savepos\@undefined\else
+  %% \pgfsys@markposition{<name>}
+  \def\pgfsys@markposition#1{%
+    \pgf@sys@savepos
+    \edef\pgf@temp{#1}%
+    \expandafter\pgfutil@writetoaux\expandafter{%
+      \expandafter\noexpand\expandafter\pgfsyspdfmark\expandafter{\pgf@temp}%
+      {\the\pgf@sys@lastxpos}{\the\pgf@sys@lastypos}}%
+  }
+  \def\pgfsyspdfmark#1#2#3{%
+    \expandafter\gdef\csname pgf@sys@pdf@mark@pos@#1\endcsname{\pgfqpoint{#2sp}{#3sp}}%
+    \pgfutil@check@rerun{#1}{{#2}{#3}}%
+  }
+  %% \pgfsys@getposition{<name>}\macro
+  \def\pgfsys@getposition#1#2{%
+    \edef\pgf@marshal{\let\noexpand#2=\expandafter\noexpand\csname pgf@sys@pdf@mark@pos@#1\endcsname}%
+    \pgf@marshal%
+  }
+  % what's that?
+  \def\pgf@sys@pdf@mark@pos@pgfpageorigin{\pgfpointorigin}
+\fi
+
+%% \pgfsys@papersize{<width>}{<height>}
+\def\pgfsys@papersize#1#2{%
+  \special{papersize=#1,#2}%
+}
+%% \pgfsys@prepare@papersize{<width>}{<height>}
+\def\pgfsys@prepare@papersize#1#2{%
+  \expandafter\gdef\expandafter\pgfsys@atbegindocument
+  \expandafter{\pgfsys@atbegindocument
+    \special{papersize=#1,#2}}%
+}
+
+% And last, the following is unique to this driver.
+
+%% \pgfsys@typesetpicturebox<box>
 \def\pgfsys@typesetpicturebox#1{%
 %\scpgz@log{bbox=(\the\pgf@picminx,\the\pgf@picminy)(\the\pgf@picmaxx,\the\pgf@picmaxy)@\pgf@shift@baseline}%
   \pgf@ya=\pgf@shift@baseline\relax%
   \advance\pgf@ya by-\pgf@picminy\relax%
   \advance\pgf@picmaxy by-\pgf@picminy\relax% maxy is now the height
   \advance\pgf@picmaxx by-\pgf@picminx\relax% maxx is now the width
+  % change the world!
   \setbox#1=\hbox{\scpgz@the@world}%
+  %
   \ht#1=\pgf@picmaxy%
   \wd#1=\pgf@picmaxx%
   \dp#1=0pt%
@@ -86,53 +154,414 @@
 
 %% variables
 \let\scpgz@v\relax
-\let\scpgz@stmt\relax
-\let\scpgz@world\relax
-\chardef\scpgz@zero=0
-\def\scpgz@spc{ }
+\let\scpgz@thickness\relax
+\let\scpgz@cmd\relax
+\let\scpgz@canvas\relax
 
 %% \scpgz@log{...}
+% For debugging.
 \def\scpgz@log#1{\immediate\write16{SC>>#1}}
 
 %% \scpgz@the@world
+% The entity of the new world.
 \def\scpgz@the@world{%
+  % The canvas is scaled to fit the size of the target box,
+  % and placed at the center of the box.
   \pgf@xc=\ifdim\pgf@picmaxx<\pgf@picmaxy \pgf@picmaxx \else \pgf@picmaxy \fi
 %\scpgz@log{size=\the\pgf@xc(\the\pgf@picmaxx|\the\pgf@picmaxy)}%
-  \pgfmathtruncatemacro\scpgz@v{round(\pgf@xc*0.2)}%
-%\scpgz@log{line width=\scpgz@v min}%
-  \ifnum\scpgz@v>\scpgz@zero
-    \edef\scpgz@world{\special{pn \scpgz@v}}%
-    \scpgz@make@new@world
+  \pgfmathtruncatemacro\scpgz@thickness{round(\pgf@xc*0.2)}%
+%\scpgz@log{thickness=\scpgz@thickness min}%
+  \ifnum\scpgz@thickness>\z@
+    \let\scpgz@canvas\pgfutil@empty
+    \scpgz@create@canvas
     \ifdim\pgf@picmaxx>\pgf@xc
       \pgf@yc\pgf@picmaxx \advance\pgf@yc-\pgf@xc \hskip.5\pgf@yc
     \fi
     \ifdim\pgf@picmaxy>\pgf@xc
       \pgf@yc\pgf@picmaxy \advance\pgf@yc-\pgf@xc \raise.5\pgf@yc
     \fi
-    \hbox{\scpgz@world}%
+    \hbox{\scpgz@canvas}%
   \fi
 }
-\def\scpgz@DO#1{\edef\scpgz@world{\scpgz@world\special{#1}}}
-\def\scpgz@BT#1#2{\def\scpgz@stmt{#1#2}}
-\def\scpgz@N#1{\edef\scpgz@stmt{\scpgz@stmt\scpgz@spc#1}}
+
+%% \scpgz@declare@canvas{<command>...}
+\def\scpgz@declare@canvas#1{%
+  \begingroup
+    \def\line{\noexpand\scpgz@NL}%
+    \def\thin{\noexpand\scpgz@TL}%
+    \def\do{\noexpand\scpgz@DO}%
+    \def\tpic##1{\noexpand\scpgz@BT##1\noexpand\scpgz@ET}%
+    \def\(##1){\noexpand\scpgz@S{##1}}%
+    \def\[##1]{\noexpand\scpgz@N{##1}}%
+    \xdef\scpgz@create@canvas{#1}%
+  \endgroup}
+% intermediate operators
+\def\scpgz@DO#1{\edef\scpgz@canvas{\scpgz@canvas\special{#1}}}
+\def\scpgz@NL{\scpgz@DO{pn \scpgz@thickness}}%
+\def\scpgz@TL{\scpgz@DO{pn 1}}%
+\def\scpgz@BT#1#2{\def\scpgz@cmd{#1#2}}
+\def\scpgz@N#1{\edef\scpgz@cmd{\scpgz@cmd\pgfutil@space#1}}
 \def\scpgz@S#1{\pgfmathtruncatemacro\scpgz@v{round(#1*\pgf@xc*13.837)}%
-  \edef\scpgz@stmt{\scpgz@stmt\scpgz@spc\scpgz@v}}
-\def\scpgz@ET{\scpgz@DO\scpgz@stmt}
+  \edef\scpgz@cmd{\scpgz@cmd\pgfutil@space\scpgz@v}}
+\def\scpgz@ET{\scpgz@DO\scpgz@cmd}
 
-%---------------------------------------
+%--------------------------------------- the essential one
 
-\begingroup
-  \def\do{\noexpand\scpgz@DO}
-  \def\tpic#1{\noexpand\scpgz@BT#1\noexpand\scpgz@ET}
-  \def\(#1){\noexpand\scpgz@S{#1}}
-  \def\[#1]{\noexpand\scpgz@N{#1}}
-  \xdef\scpgz@make@new@world{%
-    \do{color push Red}%
-    \tpic{pa\(0)\(0)}\tpic{pa\(1)\(-1)}\tpic{fp}%
-    \tpic{ar\(0.5)\(-0.5)\(0.5)\(0.5)\[0]\[6.3]}%
-    \do{color pop}%
-  }
-\endgroup
+%% Make the world a snowman!
+\scpgz@declare@canvas{
+\line%
+\do{color push rgb 0.6 0.8 1}%
+\tpic{ar\(0.07)\(-0.28)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.08)\(-0.68)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.13)\(-0.55)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.23)\(-0.76)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.42)\(-0.89)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.74)\(-0.89)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.88)\(-0.73)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.92)\(-0.53)\(0.04)\(0.04)\[0]\[6.3]}%
+\tpic{ar\(0.94)\(-0.23)\(0.04)\(0.04)\[0]\[6.3]}%
+\do{color pop}%
+\do{color push gray 0}%
+\tpic{pa\(0.5)\(-0.72)}%
+\tpic{pa\(0.5016)\(-0.72)}%
+\tpic{pa\(0.5033)\(-0.72)}%
+\tpic{pa\(0.5065)\(-0.72)}%
+\tpic{pa\(0.5131)\(-0.7198)}%
+\tpic{pa\(0.526)\(-0.7192)}%
+\tpic{pa\(0.5514)\(-0.7168)}%
+\tpic{pa\(0.5997)\(-0.7075)}%
+\tpic{pa\(0.6825)\(-0.6725)}%
+\tpic{pa\(0.76)\(-0.55)}%
+\tpic{pa\(0.7338)\(-0.4913)}%
+\tpic{pa\(0.7052)\(-0.4642)}%
+\tpic{pa\(0.6882)\(-0.4517)}%
+\tpic{pa\(0.6792)\(-0.4457)}%
+\tpic{pa\(0.6746)\(-0.4428)}%
+\tpic{pa\(0.6723)\(-0.4414)}%
+\tpic{pa\(0.6712)\(-0.4407)}%
+\tpic{pa\(0.67)\(-0.44)}%
+\tpic{pa\(0.6714)\(-0.4396)}%
+\tpic{pa\(0.6728)\(-0.4393)}%
+\tpic{pa\(0.6756)\(-0.4386)}%
+\tpic{pa\(0.6811)\(-0.437)}%
+\tpic{pa\(0.6917)\(-0.4337)}%
+\tpic{pa\(0.7118)\(-0.4261)}%
+\tpic{pa\(0.7472)\(-0.4075)}%
+\tpic{pa\(0.8)\(-0.36)}%
+\tpic{pa\(0.84)\(-0.25)}%
+\tpic{pa\(0.7863)\(-0.12)}%
+\tpic{pa\(0.68)\(-0.08)}%
+\tpic{pa\(0.5)\(-0.08)}%
+\tpic{pa\(0.32)\(-0.08)}%
+\tpic{pa\(0.2138)\(-0.12)}%
+\tpic{pa\(0.16)\(-0.25)}%
+\tpic{pa\(0.2)\(-0.36)}%
+\tpic{pa\(0.2528)\(-0.4075)}%
+\tpic{pa\(0.2882)\(-0.4261)}%
+\tpic{pa\(0.3083)\(-0.4337)}%
+\tpic{pa\(0.319)\(-0.437)}%
+\tpic{pa\(0.3244)\(-0.4386)}%
+\tpic{pa\(0.3272)\(-0.4393)}%
+\tpic{pa\(0.3286)\(-0.4396)}%
+\tpic{pa\(0.33)\(-0.44)}%
+\tpic{pa\(0.3288)\(-0.4407)}%
+\tpic{pa\(0.3277)\(-0.4414)}%
+\tpic{pa\(0.3253)\(-0.4428)}%
+\tpic{pa\(0.3208)\(-0.4457)}%
+\tpic{pa\(0.3118)\(-0.4517)}%
+\tpic{pa\(0.2949)\(-0.4642)}%
+\tpic{pa\(0.2662)\(-0.4913)}%
+\tpic{pa\(0.24)\(-0.55)}%
+\tpic{pa\(0.3175)\(-0.6725)}%
+\tpic{pa\(0.4003)\(-0.7075)}%
+\tpic{pa\(0.4486)\(-0.7168)}%
+\tpic{pa\(0.474)\(-0.7192)}%
+\tpic{pa\(0.4869)\(-0.7198)}%
+\tpic{pa\(0.4935)\(-0.72)}%
+\tpic{pa\(0.4967)\(-0.72)}%
+\tpic{pa\(0.4984)\(-0.72)}%
+\tpic{pa\(0.5)\(-0.72)}%
+\tpic{sp}%
+\tpic{sh\[1]}\tpic{ia\(0.4)\(-0.56)\(0.02)\(0.03)\[0]\[6.3]}%
+\tpic{sh\[1]}\tpic{ia\(0.6)\(-0.56)\(0.02)\(0.03)\[0]\[6.3]}%
+\tpic{pa\(0.4)\(-0.48)}%
+\tpic{pa\(0.4012)\(-0.4793)}%
+\tpic{pa\(0.4024)\(-0.4786)}%
+\tpic{pa\(0.4048)\(-0.4773)}%
+\tpic{pa\(0.4099)\(-0.4747)}%
+\tpic{pa\(0.4209)\(-0.4702)}%
+\tpic{pa\(0.4453)\(-0.4631)}%
+\tpic{pa\(0.5)\(-0.4575)}%
+\tpic{pa\(0.5547)\(-0.4631)}%
+\tpic{pa\(0.5791)\(-0.4702)}%
+\tpic{pa\(0.5901)\(-0.4747)}%
+\tpic{pa\(0.5952)\(-0.4773)}%
+\tpic{pa\(0.5976)\(-0.4786)}%
+\tpic{pa\(0.5988)\(-0.4793)}%
+\tpic{pa\(0.6)\(-0.48)}%
+\tpic{sp}%
+\do{color pop}%
+\thin%
+\do{color push rgb 0 0.5 0}%
+\tpic{sh\[1]}%
+\tpic{pa\(0.58)\(-0.9)}%
+\tpic{pa\(0.5815)\(-0.8993)}%
+\tpic{pa\(0.583)\(-0.8986)}%
+\tpic{pa\(0.5859)\(-0.8972)}%
+\tpic{pa\(0.5919)\(-0.8944)}%
+\tpic{pa\(0.6037)\(-0.8888)}%
+\tpic{pa\(0.6275)\(-0.8775)}%
+\tpic{pa\(0.675)\(-0.855)}%
+\tpic{pa\(0.7225)\(-0.8325)}%
+\tpic{pa\(0.7462)\(-0.8213)}%
+\tpic{pa\(0.7581)\(-0.8156)}%
+\tpic{pa\(0.7641)\(-0.8128)}%
+\tpic{pa\(0.767)\(-0.8114)}%
+\tpic{pa\(0.7685)\(-0.8107)}%
+\tpic{pa\(0.77)\(-0.81)}%
+\tpic{pa\(0.7698)\(-0.8084)}%
+\tpic{pa\(0.7695)\(-0.8069)}%
+\tpic{pa\(0.7691)\(-0.8038)}%
+\tpic{pa\(0.7681)\(-0.7975)}%
+\tpic{pa\(0.7662)\(-0.785)}%
+\tpic{pa\(0.7625)\(-0.76)}%
+\tpic{pa\(0.755)\(-0.71)}%
+\tpic{pa\(0.7475)\(-0.66)}%
+\tpic{pa\(0.7437)\(-0.635)}%
+\tpic{pa\(0.7419)\(-0.6225)}%
+\tpic{pa\(0.7409)\(-0.6163)}%
+\tpic{pa\(0.7405)\(-0.6131)}%
+\tpic{pa\(0.7402)\(-0.6116)}%
+\tpic{pa\(0.74)\(-0.61)}%
+\tpic{pa\(0.7381)\(-0.6098)}%
+\tpic{pa\(0.7362)\(-0.6096)}%
+\tpic{pa\(0.7323)\(-0.6093)}%
+\tpic{pa\(0.7241)\(-0.6089)}%
+\tpic{pa\(0.7066)\(-0.6094)}%
+\tpic{pa\(0.6681)\(-0.6145)}%
+\tpic{pa\(0.585)\(-0.6388)}%
+\tpic{pa\(0.5094)\(-0.6761)}%
+\tpic{pa\(0.4802)\(-0.6976)}%
+\tpic{pa\(0.4689)\(-0.7088)}%
+\tpic{pa\(0.4641)\(-0.7144)}%
+\tpic{pa\(0.462)\(-0.7172)}%
+\tpic{pa\(0.461)\(-0.7186)}%
+\tpic{pa\(0.46)\(-0.72)}%
+\tpic{pa\(0.4609)\(-0.7214)}%
+\tpic{pa\(0.4619)\(-0.7228)}%
+\tpic{pa\(0.4638)\(-0.7256)}%
+\tpic{pa\(0.4675)\(-0.7312)}%
+\tpic{pa\(0.475)\(-0.7425)}%
+\tpic{pa\(0.49)\(-0.765)}%
+\tpic{pa\(0.52)\(-0.81)}%
+\tpic{pa\(0.55)\(-0.855)}%
+\tpic{pa\(0.565)\(-0.8775)}%
+\tpic{pa\(0.5725)\(-0.8888)}%
+\tpic{pa\(0.5763)\(-0.8944)}%
+\tpic{pa\(0.5781)\(-0.8972)}%
+\tpic{pa\(0.5791)\(-0.8986)}%
+\tpic{pa\(0.58)\(-0.9)}%
+\tpic{sp}%
+\do{color pop}%
+\do{color push rgb 1 0 0}%
+\tpic{sh\[1]}%
+\tpic{pa\(0.27)\(-0.48)}%
+\tpic{pa\(0.2712)\(-0.4792)}%
+\tpic{pa\(0.2723)\(-0.4784)}%
+\tpic{pa\(0.2747)\(-0.4769)}%
+\tpic{pa\(0.2794)\(-0.4739)}%
+\tpic{pa\(0.2888)\(-0.468)}%
+\tpic{pa\(0.3077)\(-0.4571)}%
+\tpic{pa\(0.3458)\(-0.4383)}%
+\tpic{pa\(0.4226)\(-0.4133)}%
+\tpic{pa\(0.5774)\(-0.4133)}%
+\tpic{pa\(0.6543)\(-0.4383)}%
+\tpic{pa\(0.6923)\(-0.4571)}%
+\tpic{pa\(0.7112)\(-0.468)}%
+\tpic{pa\(0.7206)\(-0.4739)}%
+\tpic{pa\(0.7253)\(-0.4769)}%
+\tpic{pa\(0.7277)\(-0.4784)}%
+\tpic{pa\(0.7288)\(-0.4792)}%
+\tpic{pa\(0.73)\(-0.48)}%
+\tpic{pa\(0.7309)\(-0.4791)}%
+\tpic{pa\(0.7318)\(-0.4781)}%
+\tpic{pa\(0.7336)\(-0.4762)}%
+\tpic{pa\(0.737)\(-0.4725)}%
+\tpic{pa\(0.7433)\(-0.4648)}%
+\tpic{pa\(0.7538)\(-0.4487)}%
+\tpic{pa\(0.7623)\(-0.4308)}%
+\tpic{pa\(0.7662)\(-0.4208)}%
+\tpic{pa\(0.7681)\(-0.4155)}%
+\tpic{pa\(0.7691)\(-0.4128)}%
+\tpic{pa\(0.7695)\(-0.4114)}%
+\tpic{pa\(0.77)\(-0.41)}%
+\tpic{pa\(0.7699)\(-0.4081)}%
+\tpic{pa\(0.7698)\(-0.4063)}%
+\tpic{pa\(0.7691)\(-0.4025)}%
+\tpic{pa\(0.7666)\(-0.3952)}%
+\tpic{pa\(0.7575)\(-0.3813)}%
+\tpic{pa\(0.7447)\(-0.3692)}%
+\tpic{pa\(0.7375)\(-0.3642)}%
+\tpic{pa\(0.7338)\(-0.362)}%
+\tpic{pa\(0.7319)\(-0.361)}%
+\tpic{pa\(0.73)\(-0.36)}%
+\tpic{pa\(0.7305)\(-0.3586)}%
+\tpic{pa\(0.7309)\(-0.3572)}%
+\tpic{pa\(0.7318)\(-0.3545)}%
+\tpic{pa\(0.7333)\(-0.3491)}%
+\tpic{pa\(0.7361)\(-0.3388)}%
+\tpic{pa\(0.7413)\(-0.3175)}%
+\tpic{pa\(0.7483)\(-0.2925)}%
+\tpic{pa\(0.7534)\(-0.2774)}%
+\tpic{pa\(0.7565)\(-0.269)}%
+\tpic{pa\(0.7582)\(-0.2646)}%
+\tpic{pa\(0.7591)\(-0.2623)}%
+\tpic{pa\(0.76)\(-0.26)}%
+\tpic{pa\(0.759)\(-0.2591)}%
+\tpic{pa\(0.7579)\(-0.2581)}%
+\tpic{pa\(0.7553)\(-0.2563)}%
+\tpic{pa\(0.7486)\(-0.2525)}%
+\tpic{pa\(0.7287)\(-0.245)}%
+\tpic{pa\(0.6995)\(-0.2375)}%
+\tpic{pa\(0.6811)\(-0.2338)}%
+\tpic{pa\(0.6709)\(-0.2319)}%
+\tpic{pa\(0.6655)\(-0.2309)}%
+\tpic{pa\(0.6628)\(-0.2305)}%
+\tpic{pa\(0.6614)\(-0.2302)}%
+\tpic{pa\(0.66)\(-0.23)}%
+\tpic{pa\(0.66)\(-0.2319)}%
+\tpic{pa\(0.66)\(-0.2337)}%
+\tpic{pa\(0.6599)\(-0.2374)}%
+\tpic{pa\(0.6595)\(-0.2446)}%
+\tpic{pa\(0.6581)\(-0.2584)}%
+\tpic{pa\(0.6525)\(-0.285)}%
+\tpic{pa\(0.6431)\(-0.3116)}%
+\tpic{pa\(0.637)\(-0.3254)}%
+\tpic{pa\(0.6336)\(-0.3326)}%
+\tpic{pa\(0.6319)\(-0.3363)}%
+\tpic{pa\(0.6309)\(-0.3381)}%
+\tpic{pa\(0.63)\(-0.34)}%
+\tpic{pa\(0.6284)\(-0.3397)}%
+\tpic{pa\(0.6267)\(-0.3394)}%
+\tpic{pa\(0.6235)\(-0.3388)}%
+\tpic{pa\(0.617)\(-0.3376)}%
+\tpic{pa\(0.6043)\(-0.3355)}%
+\tpic{pa\(0.5797)\(-0.3318)}%
+\tpic{pa\(0.5337)\(-0.3271)}%
+\tpic{pa\(0.4533)\(-0.327)}%
+\tpic{pa\(0.33)\(-0.3563)}%
+\tpic{pa\(0.2821)\(-0.3812)}%
+\tpic{pa\(0.2605)\(-0.3953)}%
+\tpic{pa\(0.2501)\(-0.4026)}%
+\tpic{pa\(0.245)\(-0.4063)}%
+\tpic{pa\(0.2425)\(-0.4081)}%
+\tpic{pa\(0.2413)\(-0.4091)}%
+\tpic{pa\(0.24)\(-0.41)}%
+\tpic{pa\(0.2405)\(-0.4119)}%
+\tpic{pa\(0.2409)\(-0.4137)}%
+\tpic{pa\(0.2419)\(-0.4173)}%
+\tpic{pa\(0.2437)\(-0.4241)}%
+\tpic{pa\(0.2475)\(-0.4364)}%
+\tpic{pa\(0.255)\(-0.4562)}%
+\tpic{pa\(0.2625)\(-0.4705)}%
+\tpic{pa\(0.2662)\(-0.4758)}%
+\tpic{pa\(0.2681)\(-0.478)}%
+\tpic{pa\(0.2691)\(-0.479)}%
+\tpic{pa\(0.27)\(-0.48)}%
+\tpic{sp}%
+\do{color pop}%
+\line
+\do{color push rgb 0.4 0.1 0}%
+\tpic{sh\[1]}%
+\tpic{pa\(0.2)\(-0.31)}%
+\tpic{pa\(0.1989)\(-0.312)}%
+\tpic{pa\(0.1977)\(-0.3144)}%
+\tpic{pa\(0.1945)\(-0.3201)}%
+\tpic{pa\(0.1863)\(-0.3342)}%
+\tpic{pa\(0.165)\(-0.3688)}%
+\tpic{pa\(0.13)\(-0.42)}%
+\tpic{pa\(0.1075)\(-0.43)}%
+\tpic{pa\(0.0906)\(-0.4341)}%
+\tpic{pa\(0.0808)\(-0.4367)}%
+\tpic{pa\(0.0755)\(-0.4382)}%
+\tpic{pa\(0.0728)\(-0.4391)}%
+\tpic{pa\(0.0714)\(-0.4395)}%
+\tpic{pa\(0.07)\(-0.44)}%
+\tpic{pa\(0.0686)\(-0.4409)}%
+\tpic{pa\(0.0673)\(-0.4418)}%
+\tpic{pa\(0.0649)\(-0.4435)}%
+\tpic{pa\(0.061)\(-0.4466)}%
+\tpic{pa\(0.0561)\(-0.4516)}%
+\tpic{pa\(0.0562)\(-0.4575)}%
+\tpic{pa\(0.08)\(-0.46)}%
+\tpic{pa\(0.1)\(-0.45)}%
+\tpic{pa\(0.1109)\(-0.4431)}%
+\tpic{pa\(0.1158)\(-0.4409)}%
+\tpic{pa\(0.118)\(-0.4402)}%
+\tpic{pa\(0.12)\(-0.44)}%
+\tpic{pa\(0.1209)\(-0.4409)}%
+\tpic{pa\(0.1218)\(-0.4419)}%
+\tpic{pa\(0.1235)\(-0.4436)}%
+\tpic{pa\(0.1266)\(-0.4471)}%
+\tpic{pa\(0.1317)\(-0.4535)}%
+\tpic{pa\(0.1388)\(-0.465)}%
+\tpic{pa\(0.15)\(-0.49)}%
+\tpic{pa\(0.16)\(-0.48)}%
+\tpic{pa\(0.15)\(-0.43)}%
+\tpic{pa\(0.22)\(-0.33)}%
+\tpic{pa\(0.2175)\(-0.3088)}%
+\tpic{pa\(0.2088)\(-0.3061)}%
+\tpic{pa\(0.2042)\(-0.3072)}%
+\tpic{pa\(0.202)\(-0.3084)}%
+\tpic{pa\(0.201)\(-0.3091)}%
+\tpic{pa\(0.2)\(-0.31)}%
+\tpic{sp}%
+\tpic{sh\[1]}%
+\tpic{pa\(0.8)\(-0.31)}%
+\tpic{pa\(0.8011)\(-0.312)}%
+\tpic{pa\(0.8023)\(-0.3144)}%
+\tpic{pa\(0.8055)\(-0.3201)}%
+\tpic{pa\(0.8137)\(-0.3342)}%
+\tpic{pa\(0.835)\(-0.3688)}%
+\tpic{pa\(0.87)\(-0.42)}%
+\tpic{pa\(0.8925)\(-0.43)}%
+\tpic{pa\(0.9094)\(-0.4341)}%
+\tpic{pa\(0.9192)\(-0.4367)}%
+\tpic{pa\(0.9245)\(-0.4382)}%
+\tpic{pa\(0.9272)\(-0.4391)}%
+\tpic{pa\(0.9286)\(-0.4395)}%
+\tpic{pa\(0.93)\(-0.44)}%
+\tpic{pa\(0.9314)\(-0.4409)}%
+\tpic{pa\(0.9327)\(-0.4418)}%
+\tpic{pa\(0.9351)\(-0.4435)}%
+\tpic{pa\(0.939)\(-0.4466)}%
+\tpic{pa\(0.9439)\(-0.4516)}%
+\tpic{pa\(0.9438)\(-0.4575)}%
+\tpic{pa\(0.92)\(-0.46)}%
+\tpic{pa\(0.9)\(-0.45)}%
+\tpic{pa\(0.8891)\(-0.4431)}%
+\tpic{pa\(0.8842)\(-0.4409)}%
+\tpic{pa\(0.882)\(-0.4402)}%
+\tpic{pa\(0.88)\(-0.44)}%
+\tpic{pa\(0.8791)\(-0.4409)}%
+\tpic{pa\(0.8782)\(-0.4419)}%
+\tpic{pa\(0.8765)\(-0.4436)}%
+\tpic{pa\(0.8734)\(-0.4471)}%
+\tpic{pa\(0.8683)\(-0.4535)}%
+\tpic{pa\(0.8612)\(-0.465)}%
+\tpic{pa\(0.85)\(-0.49)}%
+\tpic{pa\(0.84)\(-0.48)}%
+\tpic{pa\(0.85)\(-0.43)}%
+\tpic{pa\(0.78)\(-0.33)}%
+\tpic{pa\(0.7825)\(-0.3088)}%
+\tpic{pa\(0.7912)\(-0.3061)}%
+\tpic{pa\(0.7958)\(-0.3072)}%
+\tpic{pa\(0.798)\(-0.3084)}%
+\tpic{pa\(0.799)\(-0.3091)}%
+\tpic{pa\(0.8)\(-0.31)}%
+\tpic{sp}%
+\do{color pop}%
+}
 
 %--------------------------------------- all done
 \endinput

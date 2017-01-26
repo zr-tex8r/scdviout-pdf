@@ -1,18 +1,26 @@
-%
-% This is file 'scdviout-pgf.sty'.
-%
-%% package declarations
+%%
+%% This is file 'scdviout-pgf.sty'.
+%%
+%% Copyright (c) 2017 Takayuki YATO (aka. "ZR")
+%%   GitHub:   https://github.com/zr-tex8r
+%%   Twitter:  @zr_tex8r
+%%
+%% This package is distributed under the MIT License.
+%%
+
+%% package declaration
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{scdviout-pgf}[2017/08/08 v0.1]
-\def\scqpz@pkgname{scdviout-pgf}
+\def\scpgz@pkgname{scdviout-pgf}
 %% options
-\let\scqpz@ok\@undefined
-\DeclareOption{dviout}{\let\scqpz@ok=t}
+\let\scpgz@ok\@undefined
+\DeclareOption{dviout}{\let\scpgz@ok=t}
 \ProcessOptions\relax
 %% set the pgf dricer
-\ifx\scqpz@ok\@undefined\else
+\ifx\scpgz@ok\@undefined\else
   \def\pgfsysdriver{pgfsys-scdviout.def}
 \fi
+
 %% done
 \endinput
 %% EOF
