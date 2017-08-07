@@ -9,7 +9,7 @@
 %%
 
 %% file declaration
-\ProvidesFile{pgfsys-scdviout.def}[2017/08/08 v0.1]
+\ProvidesFile{pgfsys-scdviout.def}[2017/08/08 v0.8]
 
 %--------------------------------------- pgfsys operations
 
